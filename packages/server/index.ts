@@ -2,6 +2,7 @@ import fs from 'fs'
 import path from 'path'
 
 import express from 'express'
+import { Router } from 'vue-router'
 
 // Importing node-fetch must be done through dynamic imports because it's
 // entirely written in ESM and requiring it fails.
@@ -26,6 +27,10 @@ async function polyfillFetch() {
   globalThis.Response = Response
 }
 
+function createDictionaryScript(dictionary) {
+  return `<script>window.__DICTIONARY__=${JSON.stringify(dictionary)}</script>`
+}
+
 async function createServer() {
   const { createServer: createViteServer } = await import('vite')
 
@@ -37,15 +42,32 @@ async function createServer() {
   app.use(vite.middlewares)
   app.use('*', async (request, response, next) => {
     const url = request.originalUrl
+    const dictionary: Record<string, unknown> = {}
 
     try {
       const templatePath = path.resolve(__dirname, '../app/index.html')
       const templateRaw = fs.readFileSync(templatePath, 'utf-8')
       const template = await vite.transformIndexHtml(url, templateRaw)
 
+      const { createRouter } = await vite.ssrLoadModule('/router.ts')
+      const router = createRouter() as Router
+      const { matched: matchedRoutes } = router.resolve(url)
+      const loaders = matchedRoutes
+        .map((route) => route.meta?.loader)
+        .filter(Boolean) as Function[]
+
+      const results = await Promise.all(loaders.map((loader) => loader()))
+      results.forEach((data, index) => {
+        const key = matchedRoutes[index].name as string
+        dictionary[key] = data
+      })
+
       const { render } = await vite.ssrLoadModule('/entry-node.ts')
-      const { outlet } = await render({ url })
-      const html = template.replace('<!--ssr-outlet-->', outlet)
+      const { outlet } = await render({ url, dictionary })
+
+      const html = template
+        .replace('<!--ssr-outlet-->', outlet)
+        .replace('<!--ssr-dictionary-->', createDictionaryScript(dictionary))
 
       response.status(200).set({ 'Content-Type': 'text/html' }).end(html)
     } catch (error) {

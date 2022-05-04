@@ -1,10 +1,9 @@
 <template>
-  <div>Hello world! {{ $props.name }}</div>
-  <RouterView />
+  <div>I am {{ $props.age }} years old</div>
 </template>
 
 <script setup lang="ts">
 defineProps<{
-  name: string
+  age: number
 }>()
 </script>

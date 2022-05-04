@@ -9,4 +9,8 @@ export default defineConfig({
   root: 'packages/app',
 
   plugins: [vue()],
+
+  build: {
+    sourcemap: true,
+  },
 })
