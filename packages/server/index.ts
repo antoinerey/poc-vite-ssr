@@ -52,11 +52,18 @@ async function createServer() {
       const { createRouter } = await vite.ssrLoadModule('/router.ts')
       const router = createRouter() as Router
       const { matched: matchedRoutes } = router.resolve(url)
-      const loaders = matchedRoutes
-        .map((route) => route.meta?.loader)
-        .filter(Boolean) as Function[]
 
-      const results = await Promise.all(loaders.map((loader) => loader()))
+      const loaders = await Promise.all(
+        matchedRoutes
+          .map((route) => route.meta?.loader)
+          .filter(Boolean)
+          .map((importLoader) => importLoader()),
+      )
+
+      const results = await Promise.all(
+        loaders.map((loader) => loader.default()),
+      )
+
       results.forEach((data, index) => {
         const key = matchedRoutes[index].name as string
         dictionary[key] = data

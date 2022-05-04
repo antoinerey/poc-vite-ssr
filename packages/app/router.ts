@@ -34,10 +34,7 @@ export function createRouter({ dictionary } = {}) {
         path: '/',
         component: () => import('./pages/Home.vue'),
         meta: {
-          loader: async () => {
-            await sleep(2000)
-            return { name: 'Jane Did' }
-          },
+          loader: () => import('./pages/Home.loader'),
         },
         children: [
           createRoute({
@@ -45,10 +42,7 @@ export function createRouter({ dictionary } = {}) {
             path: '/nested',
             component: () => import('./pages/Nested.vue'),
             meta: {
-              loader: async () => {
-                await sleep(1000)
-                return { age: 9999 }
-              },
+              loader: () => import('./pages/Nested.loader'),
             },
           }),
         ],
